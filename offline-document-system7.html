@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>公文製作系統 - 核心功能展示</title>
+    <!-- Vue 3 -->
+    <script src="./libs/vue.global.js"></script>
+    <!-- Element Plus -->
+    <link rel="stylesheet" href="./libs/index.css">
+    <script src="./libs/index.full.js"></script>
+    <!-- Element Plus Icons (如果有的話) -->
+    <script src="./libs/element-plus-icons.js"></script> 
+    <!-- TinyMCE -->
+    <script src="./libs/tinymce/tinymce.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang TC', 'Microsoft JhengHei', sans-serif;
+            background-color: #f5f7fa;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            margin: 0;
+            text-align: center;
+            font-size: 28px;
+        }
+        .main-content {
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+        
+        /* AI 功能動畫樣式 */
+        @keyframes aiPulse {
+            0% {
+                box-shadow: 0 0 0 0 rgba(103, 194, 58, 0.7);
+            }
+            70% {
+                box-shadow: 0 0 0 10px rgba(103, 194, 58, 0);
+            }
+            100% {
+                box-shadow: 0 0 0 0 rgba(103, 194, 58, 0);
+            }
+        }
+        
+        @keyframes aiProcessing {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .ai-button {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .ai-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(103, 194, 58, 0.3);
+        }
+        
+        .ai-button.processing {
+            animation: aiPulse 2s infinite;
+        }
+        
+        .ai-button.processing::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 20px;
+            height: 20px;
+            margin: -10px 0 0 -10px;
+            border: 2px solid #fff;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: aiProcessing 1s linear infinite;
+        }
+        
+        /* AI 結果展示動畫 */
+        .ai-result {
+            animation: fadeInUp 0.5s ease-out;
+        }
+        
+        .ai-suggestion-item {
+            opacity: 0;
+            animation: fadeInUp 0.5s ease-out forwards;
+        }
+        
+        .ai-suggestion-item:nth-child(1) { animation-delay: 0.1s; }
+        .ai-suggestion-item:nth-child(2) { animation-delay: 0.2s; }
+        .ai-suggestion-item:nth-child(3) { animation-delay: 0.3s; }
+        .ai-suggestion-item:nth-child(4) { animation-delay: 0.4s; }
+        .ai-suggestion-item:nth-child(5) { animation-delay: 0.5s; }
+        
+        /* AI 解說面板 */
+        .ai-explanation {
+            background: linear-gradient(135deg, #f5f7fa 0%, #e9ecef 100%);
+            border-left: 4px solid #67c23a;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .ai-explanation::before {
+            content: '⚙️';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 24px;
+            opacity: 0.3;
+        }
+        
+        /* 分文作業樣式 */
+        .distribution-panel {
+            background: #f5f7fa;
+            border-radius: 8px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        .distribution-unit {
+            background: white;
+            border: 1px solid #e4e7ed;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .distribution-unit:hover {
+            border-color: #409eff;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .distribution-unit.ai-recommended {
+            border-color: #67c23a;
+            background-color: #f0f9ff;
+            position: relative;
+        }
+        
+        .distribution-unit.ai-recommended::after {
+            content: 'AI 建議';
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #67c23a;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 12px;
+        }
+        
+        /* 編輯器樣式 */
+        .editor-container {
+            min-height: 600px;
+            border: 1px solid #e4e7ed;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        
+        /* 簽核註記樣式 */
+        .approval-annotation {
+            background-color: #fef0f0;
+            border-left: 4px solid #f56c6c;
+            padding: 10px;
+            margin: 10px 0;
+            position: relative;
+        }
+        
+        .approval-annotation.approved {
+            background-color: #f0f9ff;
+            border-left-color: #409eff;
+        }
+        
+        .approval-annotation.rejected {
+            background-color: #fef0f0;
+            border-left-color: #f56c6c;
+        }
+        
+        .annotation-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 5px;
+        }
+        
+        .annotation-user {
+            font-weight: bold;
+            color: #303133;
+        }
+        
+        .annotation-time {
+            font-size: 12px;
+            color: #909399;
+        }
+        
+        .annotation-content {
+            color: #606266;
+            line-height: 1.6;
+        }
+        
+        /* 修訂標記樣式 */
+        .revision-mark {
+            background-color: #ffd700;
+            text-decoration: underline;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .revision-mark.deleted {
+            background-color: #ffcdd2;
+            text-decoration: line-through;
+            color: #f44336;
+        }
+        
+        .revision-mark.added {
+            background-color: #c8e6c9;
+            color: #4caf50;
+        }
+        
+        /* 側邊欄樣式 */
+        .sidebar {
+            background: #f5f7fa;
+            border-radius: 8px;
+            padding: 15px;
+            margin-left: 20px;
+        }
+        
+        .version-item {
+            padding: 10px;
+            margin-bottom: 10px;
+            background: white;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .version-item:hover {
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transform: translateY(-2px);
+        }
+        
+        .version-item.active {
+            border-left: 3px solid #409eff;
+            background-color: #ecf5ff;
+        }
+        
+        /* 工具列樣式 */
+        .toolbar {
+            background: #f5f7fa;
+            border-radius: 4px;
+            padding: 10px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        /* 清稿模式樣式 */
+        .clean-draft-mode {
+            background-color: #e6f7ff;
+            border: 2px dashed #1890ff;
+            padding: 20px;
+            margin: 10px 0;
+        }
+        
+        .clean-draft-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+        
+        .comparison-view {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .comparison-panel {
+            border: 1px solid #e4e7ed;
+            border-radius: 4px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+        }
+        
+        .comparison-panel h4 {
+            margin: 0 0 10px 0;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e4e7ed;
+        }
+        
+        /* 簽核流程樣式 */
+        .signature-flow {
+            padding: 20px;
+            background: #fafafa;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        
+        .flow-step {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        .flow-step:not(:last-child)::after {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 40px;
+            width: 2px;
+            height: calc(100% + 20px);
+            background: #e4e7ed;
+        }
+        
+        .flow-step.completed::after {
+            background: #67c23a;
+        }
+        
+        .step-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #e4e7ed;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-right: 15px;
+            z-index: 1;
+        }
+        
+        .flow-step.completed .step-icon {
+            background: #67c23a;
+            color: white;
+        }
+        
+        .flow-step.current .step-icon {
+            background: #409eff;
+            color: white;
+        }
+        
+        .step-content {
+            flex: 1;
+        }
+        
+        .step-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        
+        .step-info {
+            font-size: 14px;
+            color: #909399;
+        }
+        
+        /* 註記工具樣式 */
+        .annotation-tools {
+            position: fixed;
+            top: 50%;
+            right: 20px;
+            transform: translateY(-50%);
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+            padding: 10px;
+            z-index: 1000;
+        }
+        
+        .annotation-tool {
+            width: 40px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+        }
+        
+        .annotation-tool:hover {
+            background: #f5f7fa;
+        }
+        
+        .annotation-tool.active {
+            background: #409eff;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div id="app">
+        <div style="text-align: center; padding: 50px;">
+            <h2>系統載入中...</h2>
+            <p>如果此訊息持續顯示，請檢查瀏覽器控制台的錯誤訊息</p>
+        </div>
+    </div>
+
+    <script>
+        // 延遲執行以確保所有資源載入完成
+        setTimeout(function() {
+            console.log('開始初始化應用程式...');
+            
+            // 檢查必要的函式庫是否載入
+            console.log('Vue:', typeof Vue !== 'undefined' ? '已載入' : '未載入');
+            console.log('ElementPlus:', typeof ElementPlus !== 'undefined' ? '已載入' : '未載入');
+            console.log('tinymce:', typeof tinymce !== 'undefined' ? '已載入' : '未載入');
+            
+            if (typeof Vue === 'undefined' || typeof ElementPlus === 'undefined') {
+                console.error('必要的函式庫未載入');
+                document.getElementById('app').innerHTML = '<h1 style="color: red; text-align: center; margin-top: 50px;">載入失敗：請確認 vue.global.js 和 index.full.js 檔案在正確位置</h1>';
+                return;
+            }
+            
+            try {
+                const { createApp } = Vue;
+                const { ElMessage, ElMessageBox } = ElementPlus;
+        
+        // 1. 公文製作元件（加入 AI 自動生成文稿功能）
+        const DocumentCreator = {
+            template: `
+                <div class="document-creator">
+                    <el-form :model="document" :rules="rules" ref="documentForm" label-width="120px">
+                        <el-row :gutter="20">
+                            <el-col :span="12">
+                                <el-form-item label="文書類型" prop="type">
+                                    <el-select v-model="document.type" @change="onTypeChange">
+                                        <el-option label="函" value="letter"></el-option>
+                                        <el-option label="簽" value="memo"></el-option>
+                                        <el-option label="令" value="order"></el-option>
+                                        <el-option label="公告" value="announcement"></el-option>
+                                        <el-option label="會議通知" value="meeting"></el-option>
+                                    </el-select>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="發文字號" prop="docNumber">
+                                    <el-input v-model="document.docNumber" readonly>
+                                        <template #append>
+                                            <el-button @click="generateDocNumber">產生</el-button>
+                                        </template>
+                                    </el-input>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                        
+                        <el-row :gutter="20">
+                            <el-col :span="12">
+                                <el-form-item label="密等" prop="securityLevel">
+                                    <el-radio-group v-model="document.securityLevel">
+                                        <el-radio label="普通">普通</el-radio>
+                                        <el-radio label="密">密</el-radio>
+                                        <el-radio label="機密">機密</el-radio>
+                                        <el-radio label="極機密">極機密</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                            </el-col>
+                            <el-col :span="12">
+                                <el-form-item label="速別" prop="urgencyLevel">
+                                    <el-radio-group v-model="document.urgencyLevel">
+                                        <el-radio label="普通件">普通件</el-radio>
+                                        <el-radio label="急件">急件</el-radio>
+                                        <el-radio label="特急件">特急件</el-radio>
+                                        <el-radio label="最速件">最速件</el-radio>
+                                    </el-radio-group>
+                                </el-form-item>
+                            </el-col>
+                        </el-row>
+                        
+                        <el-form-item label="主旨" prop="subject">
+                            <el-input v-model="document.subject" 
+                                     type="textarea" 
+                                     :rows="2"
+                                     placeholder="請輸入主旨（限80字）"
+                                     maxlength="80"
+                                     show-word-limit>
+                            </el-input>
+                        </el-form-item>
+                        
+                        <el-form-item label="受文者" prop="recipients">
+                            <el-select v-model="document.recipients" 
+                                      multiple 
+                                      filterable 
+                                      allow-create
+                                      placeholder="選擇或輸入受文機關">
+                                <el-option v-for="org in organizations" 
+                                          :key="org.id" 
+                                          :label="org.name" 
+                                          :value="org.id">
+                                </el-option>
+                            </el-select>
+                        </el-form-item>
+                    </el-form>
+                    
+                    <!-- 工具列 -->
+                    <div class="toolbar">
+                        <el-button type="primary" @click="insertTemplate">
+                            套用範本
+                        </el-button>
+                        <el-button @click="insertPhrase">
+                            常用詞庫
+                        </el-button>
+                        <el-button @click="insertSeal">
+                            插入印章
+                        </el-button>
+                        <el-button @click="addPageNumber">
+                            頁碼設定
+                        </el-button>
+                        <el-button 
+                            @click="showAIDialog" 
+                            type="success" 
+                            class="ai-button"
+                            :class="{ 'processing': aiProcessing }"
+                            :loading="aiProcessing">
+                            <span v-if="!aiProcessing">⚙️ AI 輔助：自動生成文稿</span>
+                            <span v-else>AI 生成中...</span>
+                        </el-button>
+                    </div>
+                    
+                    <!-- AI 生成對話框 -->
+                    <el-dialog 
+                        v-model="aiDialogVisible" 
+                        title="AI 輔助：自動生成文稿"
+                        width="60%"
+                        :close-on-click-modal="false">
+                        
+                        <div class="ai-explanation">
+                            <h4>⚙️ AI 自動生成文稿功能說明</h4>
+                            <p>本功能採用 <strong>自然語言生成 (NLG)</strong> 技術，能夠：</p>
+                            <ul>
+                                <li>根據您提供的關鍵資訊，自動生成符合公文格式的草稿</li>
+                                <li>智慧分析文件類型，套用適當的公文用語和結構</li>
+                                <li>確保生成內容符合政府公文撰寫規範</li>
+                            </ul>
+                        </div>
+                        
+                        <el-form :model="aiForm" label-width="120px">
+                            <el-form-item label="關鍵事項">
+                                <el-input 
+                                    v-model="aiForm.keyPoints" 
+                                    type="textarea"
+                                    :rows="3"
+                                    placeholder="請簡述公文主要內容，例如：申請補助經費50萬元辦理資訊教育推廣活動">
+                                </el-input>
+                            </el-form-item>
+                            
+                            <el-form-item label="背景說明">
+                                <el-input 
+                                    v-model="aiForm.background" 
+                                    type="textarea"
+                                    :rows="2"
+                                    placeholder="相關背景資訊（選填）">
+                                </el-input>
+                            </el-form-item>
+                            
+                            <el-form-item label="生成選項">
+                                <el-checkbox-group v-model="aiForm.options">
+                                    <el-checkbox label="formal">使用正式用語</el-checkbox>
+                                    <el-checkbox label="detailed">包含詳細說明</el-checkbox>
+                                    <el-checkbox label="attachment">提及附件</el-checkbox>
+                                </el-checkbox-group>
+                            </el-form-item>
+                        </el-form>
+                        
+                        <template #footer>
+                            <span class="dialog-footer">
+                                <el-button @click="aiDialogVisible = false">取消</el-button>
+                                <el-button type="primary" @click="generateWithAI">開始生成</el-button>
+                            </span>
+                        </template>
+                    </el-dialog>
+                    
+                    <!-- TinyMCE 編輯器 -->
+                    <div id="document-editor" class="editor-container"></div>
+                    
+                    <!-- 操作按鈕 -->
+                    <div style="margin-top: 20px; text-align: center;">
+                        <el-button type="primary" size="large" @click="saveDocument">
+                            儲存草稿
+                        </el-button>
+                        <el-button type="success" size="large" @click="submitForApproval">
+                            送出簽核
+                        </el-button>
+                        <el-button size="large" @click="previewDocument">
+                            預覽列印
+                        </el-button>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    document: {
+                        type: 'letter',
+                        docNumber: '',
+                        securityLevel: '普通',
+                        urgencyLevel: '普通件',
+                        subject: '',
+                        recipients: [],
+                        content: ''
+                    },
+                    organizations: [
+                        { id: 1, name: '行政院' },
+                        { id: 2, name: '財政部' },
+                        { id: 3, name: '經濟部' },
+                        { id: 4, name: '教育部' },
+                        { id: 5, name: '內政部' }
+                    ],
+                    rules: {
+                        type: [{ required: true, message: '請選擇文書類型' }],
+                        subject: [
+                            { required: true, message: '請輸入主旨' },
+                            { max: 80, message: '主旨不得超過80字' }
+                        ],
+                        recipients: [{ required: true, message: '請選擇受文者' }]
+                    },
+                    editor: null,
+                    aiDialogVisible: false,
+                    aiProcessing: false,
+                    aiForm: {
+                        keyPoints: '',
+                        background: '',
+                        options: ['formal', 'detailed']
+                    }
+                }
+            },
+            mounted() {
+                this.initEditor();
+            },
+            methods: {
+                initEditor() {
+                    tinymce.init({
+                        selector: '#document-editor',
+                        height: 600,
+                        language: 'zh_TW',
+                        plugins: [
+                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap', 'preview',
+                            'anchor', 'searchreplace', 'visualblocks', 'code', 'fullscreen',
+                            'insertdatetime', 'media', 'table', 'help', 'wordcount', 'pagebreak'
+                        ],
+                        toolbar: 'undo redo | styles | bold italic underline | ' +
+                                'alignleft aligncenter alignright alignjustify | ' +
+                                'bullist numlist outdent indent | pagebreak | ' +
+                                'removeformat | help',
+                        menubar: 'file edit view insert format tools table help',
+                        content_style: `
+                            body { 
+                                font-family: '標楷體', 'DFKai-SB', serif; 
+                                font-size: 14pt;
+                                line-height: 1.8;
+                            }
+                            p { margin: 0 0 1em 0; }
+                            .page-break { 
+                                page-break-after: always; 
+                                border-top: 2px dashed #ccc; 
+                                margin: 20px 0;
+                                text-align: center;
+                                color: #999;
+                            }
+                            .page-break::before { content: '--- 分頁 ---'; }
+                        `,
+                        setup: (editor) => {
+                            this.editor = editor;
+                            
+                            // 自訂按鈕
+                            editor.ui.registry.addButton('docNumber', {
+                                text: '發文字號',
+                                onAction: () => this.insertDocNumber()
+                            });
+                            
+                            editor.ui.registry.addButton('sealStamp', {
+                                text: '騎縫章',
+                                onAction: () => this.addSealStamp()
+                            });
+                            
+                            // 監聽內容變更
+                            editor.on('change', () => {
+                                this.document.content = editor.getContent();
+                            });
+                        }
+                    });
+                },
+                
+                showAIDialog() {
+                    this.aiDialogVisible = true;
+                },
+                
+                async generateWithAI() {
+                    if (!this.aiForm.keyPoints) {
+                        ElMessage.warning('請輸入關鍵事項');
+                        return;
+                    }
+                    
+                    this.aiProcessing = true;
+                    this.aiDialogVisible = false;
+                    
+                    // 顯示處理中的提示
+                    const loading = ElMessage({
+                        message: 'AI 正在分析您的需求並生成文稿...',
+                        type: 'info',
+                        duration: 0
+                    });
+                    
+                    // 模擬 AI 生成過程
+                    setTimeout(() => {
+                        // 生成主旨
+                        if (!this.document.subject) {
+                            this.document.subject = this.generateAISubject();
+                        }
+                        
+                        // 生成文稿內容
+                        const content = this.generateAIContent();
+                        
+                        // 將生成的內容插入編輯器
+                        if (this.editor) {
+                            this.editor.setContent(content);
+                            
+                            // 動畫效果：逐步顯示內容
+                            this.animateContentDisplay();
+                        }
+                        
+                        loading.close();
+                        this.aiProcessing = false;
+                        
+                        ElMessage({
+                            message: 'AI 文稿生成完成！請檢視並調整內容。',
+                            type: 'success',
+                            duration: 3000
+                        });
+                        
+                        // 顯示 AI 生成解說
+                        this.showAIExplanation();
+                        
+                    }, 3000); // 模擬處理時間
+                },
+                
+                generateAISubject() {
+                    // 如果是關於公文系統升級的內容，使用特定主旨
+                    if (this.aiForm.keyPoints.includes('公文') || this.aiForm.keyPoints.includes('升級') || this.aiForm.keyPoints.includes('AI')) {
+                        return '有關一代公文升級二代公文智慧化AI規劃進度報告一案，請查照。';
+                    }
+                    const keyWords = this.aiForm.keyPoints.slice(0, 30);
+                    return `有關${keyWords}一案，請查照。`;
+                },
+                
+                generateAIContent() {
+                    const date = new Date();
+                    const year = date.getFullYear() - 1911;
+                    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+                    const day = date.getDate().toString().padStart(2, '0');
+                    
+                    let content = `
+                        <p style="text-align: center;"><strong>國防部　${this.getDocTypeName()}</strong></p>
+                        <br>
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 15%;">發文日期：</td>
+                                <td>中華民國${year}年${month}月${day}日</td>
+                            </tr>
+                            <tr>
+                                <td>發文字號：</td>
+                                <td>${this.document.docNumber || '國防字第○○○○○○○○○○號'}</td>
+                            </tr>
+                            <tr>
+                                <td>速別：</td>
+                                <td>${this.document.urgencyLevel}</td>
+                            </tr>
+                            <tr>
+                                <td>密等及解密條件或保密期限：</td>
+                                <td>${this.document.securityLevel}</td>
+                            </tr>`;
+                    
+                    if (this.aiForm.options.includes('attachment')) {
+                        content += `
+                            <tr>
+                                <td>附件：</td>
+                                <td>如說明</td>
+                            </tr>`;
+                    }
+                    
+                    content += `
+                        </table>
+                        <br>
+                        <p class="ai-result"><strong>主旨：</strong>${this.document.subject || this.generateAISubject()}</p>
+                        <p class="ai-result"><strong>說明：</strong></p>
+                        <ol class="ai-result">`;
+                    
+                    // 根據關鍵事項生成說明內容
+                    const points = this.generateExplanationPoints();
+                    points.forEach((point, index) => {
+                        content += `<li class="ai-suggestion-item">${point}</li>`;
+                    });
+                    
+                    content += `
+                        </ol>
+                        <p class="ai-result"><strong>辦法：</strong>${this.generateActionItems()}</p>
+                        <br>
+                        <p style="text-align: right;">部長　○○○</p>
+                    `;
+                    
+                    return content;
+                },
+                
+                generateExplanationPoints() {
+                    const points = [];
+                    
+                    // 依據點
+                    if (this.aiForm.background) {
+                        points.push(`依據${this.aiForm.background}辦理。`);
+                    } else {
+                        points.push('依據相關規定辦理。');
+                    }
+                    
+                    // 主要內容點
+                    if (this.aiForm.keyPoints) {
+                        points.push(`為${this.aiForm.keyPoints}。`);
+                    }
+                    
+                    // 詳細說明
+                    if (this.aiForm.options.includes('detailed')) {
+                        points.push('相關執行細節及規劃詳如附件。');
+                        points.push('本案業經相關單位研議，確有執行之必要性。');
+                    }
+                    
+                    return points;
+                },
+                
+                generateActionItems() {
+                    if (this.aiForm.options.includes('formal')) {
+                        return '請查照辦理。';
+                    } else {
+                        return '請配合辦理。';
+                    }
+                },
+                
+                getDocTypeName() {
+                    const names = {
+                        letter: '函',
+                        memo: '簽',
+                        order: '令',
+                        announcement: '公告',
+                        meeting: '開會通知單'
+                    };
+                    return names[this.document.type] || '函';
+                },
+                
+                animateContentDisplay() {
+                    // 為生成的內容添加動畫效果
+                    const elements = this.editor.getBody().querySelectorAll('.ai-result, .ai-suggestion-item');
+                    elements.forEach(el => {
+                        el.style.opacity = '1';
+                    });
+                },
+                
+                showAIExplanation() {
+                    ElMessageBox.alert(
+                        `<div class="ai-explanation" style="margin: 0;">
+                            <h4>✨ AI 生成完成</h4>
+                            <p><strong>生成技術：</strong>自然語言生成 (NLG)</p>
+                            <p><strong>分析結果：</strong></p>
+                            <ul>
+                                <li>文書類型：${this.getDocTypeName()}</li>
+                                <li>主旨長度：${this.document.subject.length} 字（符合80字限制）</li>
+                                <li>結構完整性：✓ 符合公文格式規範</li>
+                                <li>用語規範性：✓ 使用標準公文用語</li>
+                            </ul>
+                            <p style="margin-top: 10px; color: #909399;">
+                                <em>提示：您可以進一步編輯調整生成的內容。</em>
+                            </p>
+                        </div>`,
+                        'AI 文稿生成報告',
+                        {
+                            dangerouslyUseHTMLString: true,
+                            confirmButtonText: '了解',
+                            type: 'success'
+                        }
+                    );
+                },
+                
+                generateDocNumber() {
+                    // 產生發文字號
+                    const date = new Date();
+                    const year = date.getFullYear() - 1911; // 民國年
+                    const serial = Math.floor(Math.random() * 10000).toString().padStart(10, '0');
+                    this.document.docNumber = `國防字第${year}${serial}號`;
+                },
+                
+                onTypeChange(type) {
+                    // 根據文書類型載入對應範本
+                    const templates = {
+                        letter: this.getLetterTemplate(),
+                        memo: this.getMemoTemplate(),
+                        order: this.getOrderTemplate(),
+                        announcement: this.getAnnouncementTemplate(),
+                        meeting: this.getMeetingTemplate()
+                    };
+                    
+                    if (this.editor && templates[type]) {
+                        this.editor.setContent(templates[type]);
+                    }
+                },
+                
+                getLetterTemplate() {
+                    return `
+                        <p style="text-align: center;"><strong>國防部　函</strong></p>
+                        <br>
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 15%;">發文日期：</td>
+                                <td>中華民國○○○年○○月○○日</td>
+                            </tr>
+                            <tr>
+                                <td>發文字號：</td>
+                                <td>${this.document.docNumber || '國防字第○○○○○○○○○○號'}</td>
+                            </tr>
+                            <tr>
+                                <td>速別：</td>
+                                <td>${this.document.urgencyLevel}</td>
+                            </tr>
+                            <tr>
+                                <td>密等及解密條件或保密期限：</td>
+                                <td>${this.document.securityLevel}</td>
+                            </tr>
+                            <tr>
+                                <td>附件：</td>
+                                <td>如說明</td>
+                            </tr>
+                        </table>
+                        <br>
+                        <p><strong>主旨：</strong>${this.document.subject || '有關一代公文升級二代公文智慧化AI規劃進度報告，請查照。'}</p>
+                        <p><strong>說明：</strong></p>
+                        <ol>
+                            <li>依據國防部資訊通信處規劃辦理。</li>
+                            <li>為提升公文處理效率，導入AI智慧化功能。</li>
+                        </ol>
+                        <p><strong>辦法：</strong>請各相關單位配合辦理。</p>
+                        <br>
+                        <p style="text-align: right;">部長　○○○</p>
+                    `;
+                },
+                
+                getMemoTemplate() {
+                    return `
+                        <p style="text-align: center;"><strong>簽</strong></p>
+                        <br>
+                        <table style="width: 100%;">
+                            <tr>
+                                <td style="width: 15%;">日期：</td>
+                                <td>中華民國○○○年○○月○○日</td>
+                            </tr>
+                            <tr>
+                                <td>承辦單位：</td>
+                                <td>○○○科</td>
+                            </tr>
+                            <tr>
+                                <td>承辦人：</td>
+                                <td>○○○</td>
+                            </tr>
+                        </table>
+                        <br>
+                        <p><strong>主旨：</strong>${this.document.subject || '○○○○○○○○○○。'}</p>
+                        <p><strong>說明：</strong></p>
+                        <ol>
+                            <li>○○○○○○○○○○。</li>
+                            <li>○○○○○○○○○○。</li>
+                        </ol>
+                        <p><strong>擬辦：</strong>○○○○○○○○○○。</p>
+                    `;
+                },
+                
+                getOrderTemplate() {
+                    return `<p style="text-align: center;"><strong>國防部　令</strong></p>`;
+                },
+                
+                getAnnouncementTemplate() {
+                    return `<p style="text-align: center;"><strong>國防部　公告</strong></p>`;
+                },
+                
+                getMeetingTemplate() {
+                    return `<p style="text-align: center;"><strong>國防部　開會通知單</strong></p>`;
+                },
+                
+                insertTemplate() {
+                    ElMessageBox.confirm('套用範本將會覆蓋現有內容，是否繼續？', '提示', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                    }).then(() => {
+                        this.onTypeChange(this.document.type);
+                        ElMessage.success('範本已套用');
+                    }).catch(() => {});
+                },
+                
+                insertPhrase() {
+                    // 常用詞庫對話框
+                    const phrases = [
+                        '茲因',
+                        '惠請查照',
+                        '敬請查照',
+                        '請查照辦理',
+                        '如說明',
+                        '依據',
+                        '檢送',
+                        '副本抄送',
+                        '特此函達'
+                    ];
+                    
+                    // 這裡應該顯示詞庫選擇對話框
+                    ElMessage.info('常用詞庫功能');
+                },
+                
+                insertSeal() {
+                    if (this.editor) {
+                        this.editor.insertContent('<p style="text-align: center;">[印章位置]</p>');
+                    }
+                },
+                
+                addPageNumber() {
+                    ElMessage.success('頁碼設定已啟用');
+                },
+                
+                saveDocument() {
+                    this.$refs.documentForm.validate((valid) => {
+                        if (valid) {
+                            // 儲存邏輯
+                            ElMessage.success('文件已儲存');
+                        }
+                    });
+                },
+                
+                submitForApproval() {
+                    this.$refs.documentForm.validate((valid) => {
+                        if (valid) {
+                            ElMessageBox.confirm('確定要送出簽核嗎？', '確認', {
+                                confirmButtonText: '確定',
+                                cancelButtonText: '取消',
+                                type: 'info',
+                            }).then(() => {
+                                // 送出簽核邏輯
+                                ElMessage.success('已送出簽核');
+                            }).catch(() => {});
+                        }
+                    });
+                },
+                
+                previewDocument() {
+                    // 預覽功能
+                    const content = this.editor.getContent();
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>預覽列印</title>
+                            <style>
+                                @page { 
+                                    size: A4; 
+                                    margin: 2cm;
+                                }
+                                body { 
+                                    font-family: '標楷體', serif; 
+                                    font-size: 14pt;
+                                    line-height: 1.8;
+                                }
+                            </style>
+                        </head>
+                        <body>${content}</body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.focus();
+                }
+            }
+        };
+        
+        // 2. 收文分文元件（新增）
+        const DocumentDistribution = {
+            template: `
+                <div class="document-distribution">
+                    <el-row :gutter="20">
+                        <el-col :span="16">
+                            <div class="main-content">
+                                <h3>收文資訊</h3>
+                                <el-descriptions :column="2" border style="margin-bottom: 20px;">
+                                    <el-descriptions-item label="來文機關">
+                                        行政院
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="來文字號">
+                                        院臺防字第1130012345號
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="來文日期">
+                                        113年1月20日
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="收文日期">
+                                        113年1月22日
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="主旨" :span="2">
+                                        有關「政府機關公文系統智慧化升級計畫」辦理情形，請查照。
+                                    </el-descriptions-item>
+                                </el-descriptions>
+                                
+                                <h3>公文內容</h3>
+                                <div style="border: 1px solid #e4e7ed; padding: 20px; background: #fafafa; margin-bottom: 20px;">
+                                    <p><strong>說明：</strong></p>
+                                    <ol>
+                                        <li>依據行政院112年12月15日院臺科字第1120195678號函辦理。</li>
+                                        <li>為提升政府機關公文處理效率，推動一代公文系統升級為二代公文系統，導入AI智慧化功能。</li>
+                                        <li>請貴部依附件實施要點，於113年2月28日前提出升級規劃報告。</li>
+                                        <li>本案聯絡人：王小明，電話：02-23565000。</li>
+                                    </ol>
+                                </div>
+                                
+                                <!-- AI 分文按鈕區 -->
+                                <div style="text-align: center; margin: 20px 0;">
+                                    <el-button 
+                                        type="success" 
+                                        size="large"
+                                        class="ai-button"
+                                        :class="{ 'processing': aiAnalyzing }"
+                                        @click="analyzeWithAI"
+                                        :loading="aiAnalyzing">
+                                        <span v-if="!aiAnalyzing">⚙️ AI 輔助功能：自動分文</span>
+                                        <span v-else>AI 分析中...</span>
+                                    </el-button>
+                                </div>
+                                
+                                <!-- AI 分析結果 -->
+                                <div v-if="showAIResult" class="ai-explanation ai-result">
+                                    <h4>⚙️ AI 分文建議</h4>
+                                    <p><strong>分析技術：</strong>自然語言處理 (NLP) + 機器學習 (ML)</p>
+                                    <p><strong>內容識別：</strong></p>
+                                    <ul>
+                                        <li>文件類型：系統升級通知</li>
+                                        <li>關鍵詞：公文系統、AI智慧化、系統升級、教育訓練</li>
+                                        <li>時限要求：113年2月28日前</li>
+                                        <li>重要性：高（涉及系統升級）</li>
+                                    </ul>
+                                    <p><strong>建議分文單位：</strong></p>
+                                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                                        <el-tag type="success" size="large">主辦：資訊通信處</el-tag>
+                                        <el-tag type="warning" size="large">會辦：戰略規劃司</el-tag>
+                                        <el-tag type="info" size="large">會辦：主計局</el-tag>
+                                    </div>
+                                </div>
+                                
+                                <!-- 分文選擇 -->
+                                <h3 style="margin-top: 30px;">分文作業</h3>
+                                <div class="distribution-panel">
+                                    <el-form :model="distributionForm" label-width="100px">
+                                        <el-form-item label="主辦單位">
+                                            <el-select v-model="distributionForm.mainUnit" placeholder="選擇主辦單位">
+                                                <el-option 
+                                                    v-for="unit in units" 
+                                                    :key="unit.id" 
+                                                    :label="unit.name" 
+                                                    :value="unit.id">
+                                                    <span>{{ unit.name }}</span>
+                                                    <span v-if="unit.aiRecommended" style="float: right; color: #67c23a;">
+                                                        AI 建議
+                                                    </span>
+                                                </el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                        
+                                        <el-form-item label="會辦單位">
+                                            <el-select v-model="distributionForm.coUnits" multiple placeholder="選擇會辦單位">
+                                                <el-option 
+                                                    v-for="unit in units" 
+                                                    :key="unit.id" 
+                                                    :label="unit.name" 
+                                                    :value="unit.id"
+                                                    :disabled="unit.id === distributionForm.mainUnit">
+                                                    <span>{{ unit.name }}</span>
+                                                    <span v-if="unit.aiRecommended && unit.id !== distributionForm.mainUnit" 
+                                                          style="float: right; color: #e6a23c;">
+                                                        AI 建議
+                                                    </span>
+                                                </el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                        
+                                        <el-form-item label="辦理期限">
+                                            <el-date-picker
+                                                v-model="distributionForm.deadline"
+                                                type="date"
+                                                placeholder="選擇日期">
+                                            </el-date-picker>
+                                        </el-form-item>
+                                        
+                                        <el-form-item label="分文意見">
+                                            <el-input
+                                                v-model="distributionForm.notes"
+                                                type="textarea"
+                                                :rows="3"
+                                                placeholder="請輸入分文意見">
+                                            </el-input>
+                                        </el-form-item>
+                                        
+                                        <el-form-item>
+                                            <el-button type="primary" @click="confirmDistribution">確認分文</el-button>
+                                            <el-button @click="resetForm">重置</el-button>
+                                        </el-form-item>
+                                    </el-form>
+                                </div>
+                            </div>
+                        </el-col>
+                        
+                        <el-col :span="8">
+                            <div class="sidebar">
+                                <h3>單位清單</h3>
+                                <div v-for="unit in units" :key="unit.id" 
+                                     class="distribution-unit"
+                                     :class="{ 'ai-recommended': unit.aiRecommended }"
+                                     @click="selectUnit(unit)">
+                                    <h4>{{ unit.name }}</h4>
+                                    <p style="font-size: 14px; color: #909399; margin: 5px 0;">
+                                        {{ unit.description }}
+                                    </p>
+                                    <div v-if="unit.aiRecommended" style="margin-top: 10px;">
+                                        <el-progress 
+                                            :percentage="unit.matchScore" 
+                                            :color="getScoreColor(unit.matchScore)">
+                                        </el-progress>
+                                        <span style="font-size: 12px; color: #909399;">
+                                            匹配度：{{ unit.matchScore }}%
+                                        </span>
+                                    </div>
+                                </div>
+                                
+                                <h3 style="margin-top: 30px;">分文歷史</h3>
+                                <el-timeline>
+                                    <el-timeline-item
+                                        v-for="(activity, index) in activities"
+                                        :key="index"
+                                        :timestamp="activity.timestamp"
+                                        :type="activity.type">
+                                        {{ activity.content }}
+                                    </el-timeline-item>
+                                </el-timeline>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </div>
+            `,
+            data() {
+                return {
+                    aiAnalyzing: false,
+                    showAIResult: false,
+                    distributionForm: {
+                        mainUnit: '',
+                        coUnits: [],
+                        deadline: '',
+                        notes: ''
+                    },
+                    units: [
+                        { 
+                            id: 1, 
+                            name: '資訊通信處', 
+                            description: '負責資訊系統規劃與維護',
+                            aiRecommended: false,
+                            matchScore: 0
+                        },
+                        { 
+                            id: 2, 
+                            name: '戰略規劃司', 
+                            description: '負責戰略規劃與評估',
+                            aiRecommended: false,
+                            matchScore: 0
+                        },
+                        { 
+                            id: 3, 
+                            name: '主計局', 
+                            description: '負責預算編列與審核',
+                            aiRecommended: false,
+                            matchScore: 0
+                        },
+                        { 
+                            id: 4, 
+                            name: '法律事務司', 
+                            description: '負責法規研訂與法律諮詢',
+                            aiRecommended: false,
+                            matchScore: 0
+                        },
+                        { 
+                            id: 5, 
+                            name: '人力司', 
+                            description: '負責人事管理與任用',
+                            aiRecommended: false,
+                            matchScore: 0
+                        }
+                    ],
+                    activities: [
+                        {
+                            content: '收文登錄',
+                            timestamp: '2024-01-22 09:00',
+                            type: 'success'
+                        },
+                        {
+                            content: '等待分文',
+                            timestamp: '2024-01-22 09:30',
+                            type: 'warning'
+                        }
+                    ]
+                }
+            },
+            methods: {
+                async analyzeWithAI() {
+                    this.aiAnalyzing = true;
+                    
+                    // 顯示分析過程
+                    const steps = [
+                        'AI 正在讀取公文內容...',
+                        'NLP 引擎分析關鍵詞彙中...',
+                        'ML 模型比對歷史分文紀錄...',
+                        '生成最佳分文建議...'
+                    ];
+                    
+                    for (let i = 0; i < steps.length; i++) {
+                        ElMessage({
+                            message: steps[i],
+                            type: 'info',
+                            duration: 1000,
+                            offset: 20 + (i * 60)
+                        });
+                        await this.delay(1000);
+                    }
+                    
+                    // 更新 AI 推薦結果
+                    this.updateAIRecommendations();
+                    
+                    this.aiAnalyzing = false;
+                    this.showAIResult = true;
+                    
+                    // 自動填入建議值
+                    this.distributionForm.mainUnit = 1; // 資訊通信處
+                    this.distributionForm.coUnits = [2, 3]; // 戰略規劃司、主計局
+                    this.distributionForm.deadline = new Date(2024, 1, 20); // 建議期限
+                    this.distributionForm.notes = 'AI 建議：本案涉及公文系統升級，建議由資訊通信處主辦，戰略規劃司協助整體規劃評估，主計局協助預算審核。';
+                    
+                    ElMessage({
+                        message: 'AI 分析完成！已自動填入建議分文單位。',
+                        type: 'success',
+                        duration: 3000
+                    });
+                },
+                
+                updateAIRecommendations() {
+                    // 更新各單位的 AI 推薦狀態和匹配分數
+                    this.units = this.units.map(unit => {
+                        switch(unit.id) {
+                            case 1: // 資訊通信處
+                                return { ...unit, aiRecommended: true, matchScore: 95 };
+                            case 2: // 戰略規劃司
+                                return { ...unit, aiRecommended: true, matchScore: 85 };
+                            case 3: // 主計局
+                                return { ...unit, aiRecommended: true, matchScore: 80 };
+                            default:
+                                return { ...unit, aiRecommended: false, matchScore: 30 };
+                        }
+                    });
+                },
+                
+                getScoreColor(score) {
+                    if (score >= 90) return '#67c23a';
+                    if (score >= 70) return '#e6a23c';
+                    return '#909399';
+                },
+                
+                selectUnit(unit) {
+                    if (!this.distributionForm.mainUnit) {
+                        this.distributionForm.mainUnit = unit.id;
+                        ElMessage.info(`已選擇 ${unit.name} 為主辦單位`);
+                    } else if (!this.distributionForm.coUnits.includes(unit.id) && unit.id !== this.distributionForm.mainUnit) {
+                        this.distributionForm.coUnits.push(unit.id);
+                        ElMessage.info(`已新增 ${unit.name} 為會辦單位`);
+                    }
+                },
+                
+                confirmDistribution() {
+                    if (!this.distributionForm.mainUnit) {
+                        ElMessage.warning('請選擇主辦單位');
+                        return;
+                    }
+                    
+                    ElMessageBox.confirm('確定要執行分文作業嗎？', '確認', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'info',
+                    }).then(() => {
+                        // 新增歷史記錄
+                        this.activities.push({
+                            content: `分文至${this.getUnitName(this.distributionForm.mainUnit)}（主辦）`,
+                            timestamp: new Date().toLocaleString(),
+                            type: 'primary'
+                        });
+                        
+                        ElMessage.success('分文作業完成！');
+                        this.resetForm();
+                    }).catch(() => {});
+                },
+                
+                getUnitName(id) {
+                    const unit = this.units.find(u => u.id === id);
+                    return unit ? unit.name : '';
+                },
+                
+                resetForm() {
+                    this.distributionForm = {
+                        mainUnit: '',
+                        coUnits: [],
+                        deadline: '',
+                        notes: ''
+                    };
+                    this.showAIResult = false;
+                    // 重置 AI 推薦狀態
+                    this.units = this.units.map(unit => ({
+                        ...unit,
+                        aiRecommended: false,
+                        matchScore: 0
+                    }));
+                },
+                
+                delay(ms) {
+                    return new Promise(resolve => setTimeout(resolve, ms));
+                }
+            }
+        };
+        
+        // 3. 文稿簽核元件
+        const DocumentApproval = {
+            template: `
+                <div class="document-approval">
+                    <el-row :gutter="20">
+                        <el-col :span="16">
+                            <div class="main-content">
+                                <h3>文稿內容</h3>
+                                <div class="document-content" style="border: 1px solid #eee; padding: 20px; min-height: 400px;">
+                                    <p style="text-align: center;"><strong>國防部　函</strong></p>
+                                    <br>
+                                    <p><strong>主旨：</strong>有關一代公文升級二代公文智慧化AI規劃進度報告，請查照。</p>
+                                    <p><strong>說明：</strong></p>
+                                    <ol>
+                                        <li>依據國防部資訊通信處113年度工作計畫辦理。</li>
+                                        <li>為提升公文處理效率，本部規劃導入AI智慧化功能，包含自動分文、智慧生成文稿等功能。</li>
+                                        <li>預計於113年6月完成系統升級，請各單位配合測試及教育訓練。</li>
+                                    </ol>
+                                </div>
+                                
+                                <!-- 簽核意見區 -->
+                                <div style="margin-top: 20px;">
+                                    <h3>簽核意見</h3>
+                                    <el-form>
+                                        <el-form-item label="簽核結果">
+                                            <el-radio-group v-model="approvalResult">
+                                                <el-radio label="approve">同意</el-radio>
+                                                <el-radio label="reject">不同意</el-radio>
+                                                <el-radio label="revise">退回修改</el-radio>
+                                                <el-radio label="countersign">加會</el-radio>
+                                            </el-radio-group>
+                                        </el-form-item>
+                                        
+                                        <el-form-item label="簽核意見">
+                                            <el-input
+                                                v-model="approvalOpinion"
+                                                type="textarea"
+                                                :rows="4"
+                                                placeholder="請輸入簽核意見"
+                                            ></el-input>
+                                        </el-form-item>
+                                        
+                                        <el-form-item label="加會單位" v-if="approvalResult === 'countersign'">
+                                            <el-select v-model="countersignDepts" multiple placeholder="選擇加會單位">
+                                                <el-option label="秘書處" value="secretary"></el-option>
+                                                <el-option label="人事處" value="personnel"></el-option>
+                                                <el-option label="主計處" value="accounting"></el-option>
+                                                <el-option label="法制處" value="legal"></el-option>
+                                            </el-select>
+                                        </el-form-item>
+                                        
+                                        <el-form-item>
+                                            <el-button type="primary" @click="submitApproval">確認簽核</el-button>
+                                            <el-button @click="saveDraft">暫存</el-button>
+                                            <el-button @click="showHistory">歷程記錄</el-button>
+                                        </el-form-item>
+                                    </el-form>
+                                </div>
+                            </div>
+                        </el-col>
+                        
+                        <el-col :span="8">
+                            <div class="sidebar">
+                                <h3>簽核流程</h3>
+                                <div class="signature-flow">
+                                    <div class="flow-step completed">
+                                        <div class="step-icon">✓</div>
+                                        <div class="step-content">
+                                            <div class="step-title">承辦人擬稿</div>
+                                            <div class="step-info">
+                                                王小明 - 2024/01/15 10:30
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flow-step completed">
+                                        <div class="step-icon">✓</div>
+                                        <div class="step-content">
+                                            <div class="step-title">科長審核</div>
+                                            <div class="step-info">
+                                                李大華 - 2024/01/15 14:20
+                                                <div style="font-size: 12px; color: #67c23a;">同意</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flow-step current">
+                                        <div class="step-icon">→</div>
+                                        <div class="step-content">
+                                            <div class="step-title">處長核定</div>
+                                            <div class="step-info">
+                                                等待簽核中...
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="flow-step">
+                                        <div class="step-icon">○</div>
+                                        <div class="step-content">
+                                            <div class="step-title">發文</div>
+                                            <div class="step-info">
+                                                待核定後發文
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h3 style="margin-top: 30px;">相關資訊</h3>
+                                <el-descriptions :column="1" border size="small">
+                                    <el-descriptions-item label="文號">
+                                        國防字第113000012345號
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="承辦人">
+                                        王小明
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="承辦單位">
+                                        資訊通信處
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="創稿日期">
+                                        2024/01/15
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="時效">
+                                        <el-tag type="warning">急件</el-tag>
+                                    </el-descriptions-item>
+                                </el-descriptions>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </div>
+            `,
+            data() {
+                return {
+                    approvalResult: 'approve',
+                    approvalOpinion: '',
+                    countersignDepts: []
+                }
+            },
+            methods: {
+                submitApproval() {
+                    ElMessageBox.confirm('確定要送出簽核意見嗎？', '確認', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'info',
+                    }).then(() => {
+                        // 送出簽核
+                        ElMessage.success('簽核意見已送出');
+                    }).catch(() => {});
+                },
+                
+                saveDraft() {
+                    ElMessage.success('簽核意見已暫存');
+                },
+                
+                showHistory() {
+                    ElMessage.info('顯示簽核歷程');
+                }
+            }
+        };
+        
+        // 4. 文稿審批註記元件
+        const DocumentAnnotation = {
+            template: `
+                <div class="document-annotation">
+                    <el-row :gutter="20">
+                        <el-col :span="16">
+                            <div class="main-content">
+                                <h3>文稿內容（含註記）</h3>
+                                
+                                <!-- 註記工具列 -->
+                                <div class="toolbar">
+                                    <el-button-group>
+                                        <el-button :type="annotationMode === 'highlight' ? 'primary' : ''" 
+                                                  @click="setAnnotationMode('highlight')">
+                                            標註
+                                        </el-button>
+                                        <el-button :type="annotationMode === 'comment' ? 'primary' : ''" 
+                                                  @click="setAnnotationMode('comment')">
+                                            批註
+                                        </el-button>
+                                        <el-button :type="annotationMode === 'delete' ? 'primary' : ''" 
+                                                  @click="setAnnotationMode('delete')">
+                                            刪除
+                                        </el-button>
+                                        <el-button :type="annotationMode === 'add' ? 'primary' : ''" 
+                                                  @click="setAnnotationMode('add')">
+                                            新增
+                                        </el-button>
+                                    </el-button-group>
+                                    
+                                    <el-button @click="clearAnnotations" type="danger" plain>
+                                        清除所有註記
+                                    </el-button>
+                                </div>
+                                
+                                <!-- 文件內容區 -->
+                                <div class="annotated-document" 
+                                     style="border: 1px solid #eee; padding: 20px; min-height: 400px; cursor: text;"
+                                     @mouseup="handleTextSelection">
+                                    <p style="text-align: center;"><strong>國防部　函</strong></p>
+                                    <br>
+                                    <p><strong>主旨：</strong>有關<span class="revision-mark" 
+                                        @click="showAnnotation($event, 1)">「一代公文升級二代公文智慧化AI規劃」</span>進度報告一案，
+                                        <span class="revision-mark deleted" 
+                                        @click="showAnnotation($event, 2)">請查照</span>
+                                        <span class="revision-mark added" 
+                                        @click="showAnnotation($event, 3)">惠請查照辦理</span>。</p>
+                                    
+                                    <div class="approval-annotation approved">
+                                        <div class="annotation-header">
+                                            <span class="annotation-user">科長 李大華</span>
+                                            <span class="annotation-time">2024/01/15 14:20</span>
+                                        </div>
+                                        <div class="annotation-content">
+                                            建議將「請查照」改為「惠請查照辦理」，語氣較為恰當。
+                                        </div>
+                                    </div>
+                                    
+                                    <p><strong>說明：</strong></p>
+                                    <ol>
+                                        <li>依據國防部資訊通信處113年度工作計畫辦理。</li>
+                                        <li>為提升公文處理效率，本部規劃導入AI智慧化功能，包含自動分文、智慧生成文稿等功能。
+                                            <span class="revision-mark" style="background-color: #fff3cd;">
+                                                請各相關單位配合測試及教育訓練
+                                            </span>。
+                                        </li>
+                                    </ol>
+                                    
+                                    <div class="approval-annotation">
+                                        <div class="annotation-header">
+                                            <span class="annotation-user">處長 陳建國</span>
+                                            <span class="annotation-time">2024/01/16 09:15</span>
+                                        </div>
+                                        <div class="annotation-content">
+                                            請補充說明預算來源及執行期程。
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </el-col>
+                        
+                        <el-col :span="8">
+                            <div class="sidebar">
+                                <h3>註記清單</h3>
+                                <div class="annotation-list">
+                                    <div v-for="(ann, index) in annotations" :key="index" 
+                                         class="annotation-item" 
+                                         style="margin-bottom: 15px; padding: 10px; background: #f5f7fa; border-radius: 4px;">
+                                        <div style="font-weight: bold; margin-bottom: 5px;">
+                                            {{ ann.user }} - {{ ann.time }}
+                                        </div>
+                                        <div style="font-size: 14px; color: #606266;">
+                                            {{ ann.content }}
+                                        </div>
+                                        <div style="margin-top: 5px;">
+                                            <el-tag size="small" :type="ann.type">{{ ann.typeText }}</el-tag>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <h3 style="margin-top: 30px;">統計資訊</h3>
+                                <el-descriptions :column="1" border size="small">
+                                    <el-descriptions-item label="總註記數">
+                                        {{ annotations.length }}
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="標註">
+                                        3 處
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="刪除">
+                                        1 處
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="新增">
+                                        1 處
+                                    </el-descriptions-item>
+                                    <el-descriptions-item label="批註">
+                                        2 則
+                                    </el-descriptions-item>
+                                </el-descriptions>
+                                
+                                <!-- 註記工具浮動面板 -->
+                                <div class="annotation-tools" v-if="showTools">
+                                    <div class="annotation-tool" 
+                                         :class="{active: annotationMode === 'highlight'}"
+                                         @click="setAnnotationMode('highlight')"
+                                         title="標註">
+                                        ✎
+                                    </div>
+                                    <div class="annotation-tool"
+                                         :class="{active: annotationMode === 'comment'}"
+                                         @click="setAnnotationMode('comment')"
+                                         title="批註">
+                                        💬
+                                    </div>
+                                    <div class="annotation-tool"
+                                         :class="{active: annotationMode === 'delete'}"
+                                         @click="setAnnotationMode('delete')"
+                                         title="刪除">
+                                        ✕
+                                    </div>
+                                </div>
+                            </div>
+                        </el-col>
+                    </el-row>
+                </div>
+            `,
+            data() {
+                return {
+                    annotationMode: 'highlight',
+                    showTools: true,
+                    annotations: [
+                        {
+                            user: '科長 李大華',
+                            time: '2024/01/15 14:20',
+                            content: '建議將「請查照」改為「惠請查照辦理」，語氣較為恰當。',
+                            type: 'success',
+                            typeText: '修改建議'
+                        },
+                        {
+                            user: '處長 陳建國',
+                            time: '2024/01/16 09:15',
+                            content: '請補充說明預算來源及執行期程。',
+                            type: 'warning',
+                            typeText: '補充說明'
+                        }
+                    ]
+                }
+            },
+            methods: {
+                setAnnotationMode(mode) {
+                    this.annotationMode = mode;
+                    ElMessage.info(`已切換到${this.getModeName(mode)}模式`);
+                },
+                
+                getModeName(mode) {
+                    const names = {
+                        highlight: '標註',
+                        comment: '批註',
+                        delete: '刪除',
+                        add: '新增'
+                    };
+                    return names[mode] || mode;
+                },
+                
+                handleTextSelection() {
+                    const selection = window.getSelection();
+                    const text = selection.toString();
+                    
+                    if (text.length > 0) {
+                        // 根據當前模式處理選取的文字
+                        this.processSelection(text, selection);
+                    }
+                },
+                
+                processSelection(text, selection) {
+                    if (this.annotationMode === 'comment') {
+                        // 顯示批註對話框
+                        ElMessageBox.prompt('請輸入批註內容', '新增批註', {
+                            confirmButtonText: '確定',
+                            cancelButtonText: '取消',
+                            inputType: 'textarea',
+                        }).then(({ value }) => {
+                            this.addAnnotation({
+                                user: '當前使用者',
+                                time: new Date().toLocaleString(),
+                                content: `對「${text}」的批註：${value}`,
+                                type: 'info',
+                                typeText: '批註'
+                            });
+                        }).catch(() => {});
+                    }
+                },
+                
+                showAnnotation(event, id) {
+                    event.stopPropagation();
+                    ElMessage.info(`查看註記 #${id}`);
+                },
+                
+                addAnnotation(annotation) {
+                    this.annotations.push(annotation);
+                    ElMessage.success('註記已新增');
+                },
+                
+                clearAnnotations() {
+                    ElMessageBox.confirm('確定要清除所有註記嗎？', '警告', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                    }).then(() => {
+                        this.annotations = [];
+                        ElMessage.success('已清除所有註記');
+                    }).catch(() => {});
+                }
+            }
+        };
+        
+        // 5. 清稿作業元件
+        const DocumentCleanDraft = {
+            template: `
+                <div class="document-clean-draft">
+                    <div class="clean-draft-mode">
+                        <div class="clean-draft-header">
+                            <h3>
+                                清稿作業模式
+                            </h3>
+                            <div>
+                                <el-switch
+                                    v-model="showComparison"
+                                    active-text="顯示比對"
+                                    inactive-text="隱藏比對">
+                                </el-switch>
+                                <el-button type="primary" @click="acceptAllChanges" style="margin-left: 10px;">
+                                    接受所有修改
+                                </el-button>
+                                <el-button type="danger" @click="rejectAllChanges">
+                                    拒絕所有修改
+                                </el-button>
+                            </div>
+                        </div>
+                        
+                        <el-alert
+                            title="清稿說明"
+                            type="info"
+                            :closable="false"
+                            show-icon>
+                            請仔細檢視所有修改標記，確認文稿內容無誤後完成清稿。
+                        </el-alert>
+                    </div>
+                    
+                    <!-- 版本選擇 -->
+                    <div style="margin: 20px 0;">
+                        <el-select v-model="selectedVersion" placeholder="選擇版本" @change="loadVersion">
+                            <el-option
+                                v-for="version in versions"
+                                :key="version.id"
+                                :label="version.label"
+                                :value="version.id">
+                                <span style="float: left">{{ version.label }}</span>
+                                <span style="float: right; color: #8492a6; font-size: 13px">
+                                    {{ version.time }} - {{ version.user }}
+                                </span>
+                            </el-option>
+                        </el-select>
+                    </div>
+                    
+                    <!-- 比對檢視 -->
+                    <div v-if="showComparison" class="comparison-view">
+                        <div class="comparison-panel">
+                            <h4>修改前版本</h4>
+                            <div>
+                                <p><strong>主旨：</strong>有關本部辦理「一代公文升級二代公文智慧化AI規劃」進度報告一案，請查照。</p>
+                                <p><strong>說明：</strong></p>
+                                <ol>
+                                    <li>依據國防部資訊通信處113年度工作計畫辦理。</li>
+                                    <li>為提升公文處理效率，本部規劃導入AI智慧化功能。</li>
+                                </ol>
+                            </div>
+                        </div>
+                        
+                        <div class="comparison-panel">
+                            <h4>修改後版本</h4>
+                            <div>
+                                <p><strong>主旨：</strong>有關本部辦理「一代公文升級二代公文智慧化AI規劃」進度報告一案，<span style="background-color: #c8e6c9;">惠請查照辦理</span>。</p>
+                                <p><strong>說明：</strong></p>
+                                <ol>
+                                    <li>依據國防部資訊通信處113年度工作計畫辦理。</li>
+                                    <li>為提升公文處理效率，本部規劃導入AI智慧化功能。</li>
+                                    <li style="background-color: #c8e6c9;">本計畫預算為新臺幣500萬元整，執行期程為113年3月至12月。</li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 清稿編輯區 -->
+                    <div style="margin-top: 20px;">
+                        <h3>最終文稿</h3>
+                        <div id="clean-draft-editor" class="editor-container"></div>
+                    </div>
+                    
+                    <!-- 修改記錄 -->
+                    <div style="margin-top: 20px;">
+                        <h3>修改記錄</h3>
+                        <el-table :data="revisionHistory" stripe style="width: 100%">
+                            <el-table-column prop="time" label="時間" width="180"></el-table-column>
+                            <el-table-column prop="user" label="修改人" width="120"></el-table-column>
+                            <el-table-column prop="action" label="動作" width="100">
+                                <template #default="scope">
+                                    <el-tag :type="getActionType(scope.row.action)" size="small">
+                                        {{ scope.row.action }}
+                                    </el-tag>
+                                </template>
+                            </el-table-column>
+                            <el-table-column prop="content" label="修改內容"></el-table-column>
+                            <el-table-column label="操作" width="150">
+                                <template #default="scope">
+                                    <el-button size="small" @click="acceptChange(scope.row)">接受</el-button>
+                                    <el-button size="small" type="danger" @click="rejectChange(scope.row)">拒絕</el-button>
+                                </template>
+                            </el-table-column>
+                        </el-table>
+                    </div>
+                    
+                    <!-- 操作按鈕 -->
+                    <div style="margin-top: 30px; text-align: center;">
+                        <el-button type="primary" size="large" @click="completeCleanDraft">
+                            完成清稿
+                        </el-button>
+                        <el-button type="success" size="large" @click="generateFinalVersion">
+                            產生正式版本
+                        </el-button>
+                        <el-button size="large" @click="previewFinal">
+                            預覽最終版
+                        </el-button>
+                    </div>
+                </div>
+            `,
+            data() {
+                return {
+                    showComparison: true,
+                    selectedVersion: 'v3',
+                    versions: [
+                        { id: 'v1', label: '初稿', time: '2024/01/15 10:30', user: '王小明' },
+                        { id: 'v2', label: '科長修改版', time: '2024/01/15 14:20', user: '李大華' },
+                        { id: 'v3', label: '處長修改版', time: '2024/01/16 09:15', user: '陳建國' },
+                        { id: 'v4', label: '最終版', time: '2024/01/16 11:00', user: '系統' }
+                    ],
+                    revisionHistory: [
+                        {
+                            time: '2024/01/15 14:20',
+                            user: '李大華',
+                            action: '修改',
+                            content: '將「請查照」改為「惠請查照辦理」'
+                        },
+                        {
+                            time: '2024/01/16 09:15',
+                            user: '陳建國',
+                            action: '新增',
+                            content: '新增第3點說明：本計畫預算為新臺幣500萬元整，執行期程為113年3月至12月。'
+                        },
+                        {
+                            time: '2024/01/16 10:30',
+                            user: '王小明',
+                            action: '修正',
+                            content: '修正錯字：將「升及」改為「升級」'
+                        }
+                    ],
+                    cleanDraftEditor: null
+                }
+            },
+            mounted() {
+                this.initCleanDraftEditor();
+            },
+            methods: {
+                initCleanDraftEditor() {
+                    tinymce.init({
+                        selector: '#clean-draft-editor',
+                        height: 500,
+                        language: 'zh_TW',
+                        plugins: [
+                            'advlist', 'autolink', 'lists', 'link', 'image', 'charmap',
+                            'preview', 'anchor', 'searchreplace', 'visualblocks', 'code',
+                            'fullscreen', 'insertdatetime', 'media', 'table', 'help', 'wordcount'
+                        ],
+                        toolbar: 'undo redo | styles | bold italic | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help',
+                        content_style: `
+                            body { 
+                                font-family: '標楷體', serif; 
+                                font-size: 14pt;
+                                line-height: 1.8;
+                            }
+                            .revision { background-color: #fff3cd; }
+                            .deletion { text-decoration: line-through; color: #dc3545; }
+                            .addition { color: #28a745; text-decoration: underline; }
+                        `,
+                        setup: (editor) => {
+                            this.cleanDraftEditor = editor;
+                            
+                            // 載入含有修訂標記的內容
+                            editor.on('init', () => {
+                                editor.setContent(`
+                                    <p style="text-align: center;"><strong>國防部　函</strong></p>
+                                    <br>
+                                    <p><strong>主旨：</strong>有關「一代公文升級二代公文智慧化AI規劃」進度報告一案，<span class="addition">惠請查照辦理</span>。</p>
+                                    <p><strong>說明：</strong></p>
+                                    <ol>
+                                        <li>依據國防部資訊通信處113年度工作計畫辦理。</li>
+                                        <li>為提升公文處理效率，本部規劃導入AI智慧化功能，包含自動分文、智慧生成文稿等功能。</li>
+                                        <li class="addition">本計畫預算為新臺幣500萬元整，執行期程為113年3月至12月。</li>
+                                    </ol>
+                                    <p><strong>辦法：</strong>請各相關單位配合辦理。</p>
+                                `);
+                            });
+                        }
+                    });
+                },
+                
+                loadVersion(versionId) {
+                    ElMessage.info(`載入版本：${versionId}`);
+                },
+                
+                acceptAllChanges() {
+                    ElMessageBox.confirm('確定要接受所有修改嗎？', '確認', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'info',
+                    }).then(() => {
+                        // 移除所有修訂標記
+                        if (this.cleanDraftEditor) {
+                            let content = this.cleanDraftEditor.getContent();
+                            content = content.replace(/<span class="(addition|deletion|revision)">/g, '');
+                            content = content.replace(/<\/span>/g, '');
+                            this.cleanDraftEditor.setContent(content);
+                        }
+                        ElMessage.success('已接受所有修改');
+                    }).catch(() => {});
+                },
+                
+                rejectAllChanges() {
+                    ElMessageBox.confirm('確定要拒絕所有修改嗎？', '警告', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'warning',
+                    }).then(() => {
+                        ElMessage.success('已拒絕所有修改');
+                    }).catch(() => {});
+                },
+                
+                acceptChange(row) {
+                    ElMessage.success(`已接受修改：${row.content}`);
+                },
+                
+                rejectChange(row) {
+                    ElMessage.warning(`已拒絕修改：${row.content}`);
+                },
+                
+                getActionType(action) {
+                    const types = {
+                        '新增': 'success',
+                        '修改': 'warning',
+                        '刪除': 'danger',
+                        '修正': 'info'
+                    };
+                    return types[action] || '';
+                },
+                
+                completeCleanDraft() {
+                    ElMessageBox.confirm('確定要完成清稿嗎？完成後將無法再修改。', '確認', {
+                        confirmButtonText: '確定',
+                        cancelButtonText: '取消',
+                        type: 'info',
+                    }).then(() => {
+                        ElMessage.success('清稿完成！');
+                    }).catch(() => {});
+                },
+                
+                generateFinalVersion() {
+                    ElMessage.success('正式版本已產生');
+                },
+                
+                previewFinal() {
+                    const content = this.cleanDraftEditor.getContent();
+                    const printWindow = window.open('', '_blank');
+                    printWindow.document.write(`
+                        <html>
+                        <head>
+                            <title>最終版預覽</title>
+                            <style>
+                                @page { size: A4; margin: 2cm; }
+                                body { 
+                                    font-family: '標楷體', serif; 
+                                    font-size: 14pt;
+                                    line-height: 1.8;
+                                }
+                            </style>
+                        </head>
+                        <body>${content}</body>
+                        </html>
+                    `);
+                    printWindow.document.close();
+                    printWindow.focus();
+                }
+            }
+        };
+        
+        // 建立 Vue 應用程式
+        const app = createApp({
+            template: `
+                <div>
+                    <div class="header">
+                        <h1>大同 二代公文 國檔認證系統 - 公文製作核心功能</h1>
+                    </div>
+                    
+                    <div class="container">
+                        <el-tabs v-model="activeTab" type="border-card">
+                            <!-- 1. 公文製作 -->
+                            <el-tab-pane label="公文製作" name="create">
+                                <document-creator></document-creator>
+                            </el-tab-pane>
+                            
+                            <!-- 2. 收文分文 -->
+                            <el-tab-pane label="收文分文" name="distribution">
+                                <document-distribution></document-distribution>
+                            </el-tab-pane>
+                            
+                            <!-- 3. 文稿簽核 -->
+                            <el-tab-pane label="文稿簽核" name="approval">
+                                <document-approval></document-approval>
+                            </el-tab-pane>
+                            
+                            <!-- 4. 審批註記 -->
+                            <el-tab-pane label="審批註記" name="annotation">
+                                <document-annotation></document-annotation>
+                            </el-tab-pane>
+                            
+                            <!-- 5. 清稿作業 -->
+                            <el-tab-pane label="清稿作業" name="clean">
+                                <document-clean-draft></document-clean-draft>
+                            </el-tab-pane>
+                        </el-tabs>
+                    </div>
+                </div>
+            `,
+            components: {
+                DocumentCreator,
+                DocumentDistribution,
+                DocumentApproval,
+                DocumentAnnotation,
+                DocumentCleanDraft
+            },
+            data() {
+                return {
+                    activeTab: 'create'
+                }
+            }
+        });
+        
+        // 使用 Element Plus
+        app.use(ElementPlus);
+        
+        // 註冊圖示 - 如果沒有獨立的圖示套件，可以註解掉這部分
+        if (typeof ElementPlusIconsVue !== 'undefined') {
+            for (const [key, component] of Object.entries(ElementPlusIconsVue)) {
+                app.component(key, component);
+            }
+        }
+        
+        // 掛載應用程式
+        app.mount('#app');
+        console.log('應用程式掛載完成');
+        
+            } catch (error) {
+                console.error('初始化錯誤:', error);
+                document.getElementById('app').innerHTML = '<h1 style="color: red; text-align: center; margin-top: 50px;">初始化失敗：' + error.message + '</h1>';
+            }
+        
+        }, 100); // 延遲 100ms 執行
+    </script>
+</body>
+</html>
